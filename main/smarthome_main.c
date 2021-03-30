@@ -12,27 +12,14 @@
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
 
-#include "esp_log.h"
-#include "esp_err.h"
-#include "esp_system.h"
-#include "esp_wifi.h"
-#include "esp_spi_flash.h"
-#include "mqtt_client.h"
+#include "mqtt.h"
 
-static const char *TAG = "MQTT";
-
-static char mqtt_status_buf[64];
-static EventGroupHandle_t wifi_event_group;
-static EventGroupHandle_t mqtt_event_group;
-
+static const char *TAG = "SmartHome";
 const int CONNECTED_BIT = BIT0;
-const int MQTT_STATUS_BIT = BIT1;
 
-static int mqtt_online = 0;
+static EventGroupHandle_t wifi_event_group;
 
-static esp_mqtt_client_handle_t client;
-
-static esp_err_t event_handler(void *ctx, system_event_t *event)
+static esp_err_t wifi_event_handler(void *ctx, system_event_t *event)
 {
     system_event_info_t *info = &event->event_info;
     switch(event->event_id)
@@ -58,75 +45,13 @@ static esp_err_t event_handler(void *ctx, system_event_t *event)
     return ESP_OK;
 }
 
-static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
-{
-    esp_mqtt_client_handle_t client = event->client;
-    memset(mqtt_status_buf, 0x00, sizeof(mqtt_status_buf));
-    switch(event->event_id)
-    {
-        case MQTT_EVENT_BEFORE_CONNECT:
-            break;
-        case MQTT_EVENT_CONNECTED:
-            ESP_LOGI(TAG, "MQTT_EVENT_CONNECT");
-            mqtt_online = 1;
-            esp_mqtt_client_subscribe(client, "/esp8266/set", 0);
-            strcpy(mqtt_status_buf, "MQTT CONNECTED");
-            break;
-        case MQTT_EVENT_DISCONNECTED:
-            ESP_LOGD(TAG, "MQTT_EVENT_DISCONNECT");
-            mqtt_online = 0;
-            strcpy(mqtt_status_buf, "MQTT DISCONNECTED");
-            break;
-        case MQTT_EVENT_SUBSCRIBED:
-            strcpy(mqtt_status_buf, "MQTT SUBSCRIBED");
-            break;
-        case MQTT_EVENT_UNSUBSCRIBED:
-            strcpy(mqtt_status_buf, "MQTT UNSUBSCRIBED");
-            break;
-        case MQTT_EVENT_PUBLISHED:
-            strcpy(mqtt_status_buf, "MQTT PUBLISH");
-            break;
-        case MQTT_EVENT_DATA:
-            ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-            printf("TOPIC=%.*s\r\n", event->topic_len, event->topic);
-            printf("DATA=%.*s\r\n", event->data_len, event->data);
-            strcpy(mqtt_status_buf, "MQTT RECEIVE");
-            break;
-        case MQTT_EVENT_ERROR:
-            ESP_LOGI(TAG, "MQTT_EVENT_ERROR");
-            strcpy(mqtt_status_buf, "MQTT ERROR");
-            break;
-        default:
-            break;
-    }
-    xEventGroupSetBits(mqtt_event_group, MQTT_STATUS_BIT);
-    return ESP_OK;
-}
-
-static void mqtt_app_start(void)
-{
-    mqtt_event_group = xEventGroupCreate();    
-    esp_mqtt_client_config_t mqtt_cfg =
-    {
-        .host = "111.230.206.15",
-        .port = 1883,
-        .username = "panda",
-        .password = "panda",
-        .event_handle = mqtt_event_handler,
-    };
-
-    client = esp_mqtt_client_init(&mqtt_cfg);
-    esp_mqtt_client_start(client);
-
-}
-
 
 static void wifi_init(void)
 {
     tcpip_adapter_init();
     wifi_event_group = xEventGroupCreate();
 
-    ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
+    ESP_ERROR_CHECK(esp_event_loop_init(wifi_event_handler, NULL));
     
     wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
     ESP_ERROR_CHECK(esp_wifi_init(&cfg));
@@ -135,8 +60,8 @@ static void wifi_init(void)
     wifi_config_t wifi_config =
     {
         .sta={
-            .ssid = "Panda",
-            .password = "18188954638"
+            .ssid = "three cobblers",
+            .password = "BRS17101"
         },
     };
 
