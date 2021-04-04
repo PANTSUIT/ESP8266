@@ -12,7 +12,8 @@
 #include "freertos/queue.h"
 #include "freertos/event_groups.h"
 
-#include "mqtt.h"
+#include "xmqtt.h"
+#include "xgpio.h"
 
 static const char *TAG = "SmartHome";
 const int CONNECTED_BIT = BIT0;
@@ -74,6 +75,18 @@ static void wifi_init(void)
 }
 
 
+static void gpio_task_example(void *arg)
+{
+    uint32_t cnt = 0;
+    for (;;) {
+        ESP_LOGI(TAG, "GPIO[14] intr, val: %d\n", gpio_get_level(14));        
+        ESP_LOGI(TAG, "cnt: %d\n", cnt++);
+        vTaskDelay(1000 / portTICK_RATE_MS);
+        gpio_set_level(14, cnt % 2);
+        gpio_set_level(14, cnt % 2);
+    }
+}
+
 void app_main()
 {
     /* Print chip information */
@@ -83,6 +96,10 @@ void app_main()
         chip_info.cores, chip_info.revision, spi_flash_get_chip_size() / (1024 * 1024)
         ,(chip_info.features & CHIP_FEATURE_EMB_FLASH) ? "embedded" : "external");
 
+    gpio_init(14 , GPIO_MODE_OUTPUT, GPIO_PULLUP_DISABLE, GPIO_PULLDOWN_ENABLE, GPIO_INTR_DISABLE);
+    
+    // xTaskCreate(gpio_task_example, "gpio_task_example", 2048, NULL, 10, NULL);
+
     wifi_init();
-    mqtt_app_start();
+    mqtt_app_start();  
 }
