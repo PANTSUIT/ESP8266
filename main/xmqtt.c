@@ -145,11 +145,12 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
 {
     esp_mqtt_client_handle_t client = event->client;
     memset(mqtt_status_buf, 0x00, sizeof(mqtt_status_buf));
+    
     switch(event->event_id)
     {
         case MQTT_EVENT_BEFORE_CONNECT:
             break;
-        case MQTT_EVENT_CONNECTED: 
+        case MQTT_EVENT_CONNECTED:  // mqtt 已连接
             ESP_LOGI(TAG, "MQTT_EVENT_CONNECT");
             mqtt_online = 1;
             esp_mqtt_client_subscribe(client, TOPIC_BEDROOM_LAMP, 0);
@@ -167,12 +168,11 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
             esp_mqtt_client_subscribe(client, TOPIC_KITCHEN_LAMP, 0);
             esp_mqtt_client_subscribe(client, TOPIC_KITCHEN_TEMPERATURE, 0);
             esp_mqtt_client_subscribe(client, TOPIC_KITCHEN_HUMIDIRTY, 0);
-
             esp_mqtt_client_subscribe(client, TOPIC_TOILET_LAMP, 0);
 
             strcpy(mqtt_status_buf, "MQTT CONNECTED");
             break;
-        case MQTT_EVENT_DISCONNECTED:
+        case MQTT_EVENT_DISCONNECTED: // mqtt 断开连接
             ESP_LOGD(TAG, "MQTT_EVENT_DISCONNECT");
             mqtt_online = 0;
             strcpy(mqtt_status_buf, "MQTT DISCONNECTED");
@@ -196,10 +196,10 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
             esp_mqtt_client_unsubscribe(client, TOPIC_TOILET_LAMP);
 
             break;
-        case MQTT_EVENT_SUBSCRIBED:
+        case MQTT_EVENT_SUBSCRIBED: // mqtt 收到定阅消息
             strcpy(mqtt_status_buf, "MQTT SUBSCRIBED");
             break;
-        case MQTT_EVENT_UNSUBSCRIBED:
+        case MQTT_EVENT_UNSUBSCRIBED: // 
             strcpy(mqtt_status_buf, "MQTT UNSUBSCRIBED");
             break;
         case MQTT_EVENT_PUBLISHED:
@@ -225,6 +225,7 @@ static esp_err_t mqtt_event_handler(esp_mqtt_event_handle_t event)
 
 void mqtt_app_start(void)
 {
+    // 配置 mqtt, broker 地址和 mqtt 的事件回调函数
     mqtt_event_group = xEventGroupCreate();    
     esp_mqtt_client_config_t mqtt_cfg =
     {
@@ -235,7 +236,8 @@ void mqtt_app_start(void)
         .event_handle = mqtt_event_handler,
     };
 
-    client = esp_mqtt_client_init(&mqtt_cfg);
-    esp_mqtt_client_start(client);
-
+    
+    client = esp_mqtt_client_init(&mqtt_cfg); // 初始化 mqtt 的相关配置
+    
+    esp_mqtt_client_start(client);  // 开始执行mqtt
 }
